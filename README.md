@@ -1,2 +1,2 @@
-# software-House-task
+# Software-House-task
 Django_full_stack_position
