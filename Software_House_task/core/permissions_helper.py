@@ -9,12 +9,12 @@ class AdminPermission(BasePermission):
         return request.user.role == UserRole.ADMIN
 
 
-
 class SalesPermission(BasePermission):
     message = "Sales users only."
 
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == UserRole.SALES
+        return (request.user.is_authenticated and
+                request.user.role == UserRole.SALES)
 
 
 class SalesReadOnly(SalesPermission):
@@ -25,8 +25,7 @@ class SalesReadOnly(SalesPermission):
 
         if request.user.role == UserRole.SALES:
             return request.method in SAFE_METHODS
-
-        return True 
+        return True
 
 
 class SalesCreateAndReadOnlyPermission(BasePermission):

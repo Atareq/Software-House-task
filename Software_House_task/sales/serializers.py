@@ -1,6 +1,9 @@
+from datetime import date
+
 from django.db import transaction
 from rest_framework import serializers
 
+from products.serializers import ProductSerializer
 from sales.services import handle_order_stock_transition
 
 from .models import Order, OrderItem, OrderStatus
@@ -82,3 +85,35 @@ class OrderSerializer(serializers.ModelSerializer):
             )
 
         return instance
+
+
+class DateRangeSerializer(serializers.Serializer):
+    start_date = serializers.DateField(
+        format="%Y-%m-%d", input_formats=["%Y-%m-%d"], required=False
+    )
+    end_date = serializers.DateField(
+        format="%Y-%m-%d", input_formats=["%Y-%m-%d"], required=False
+    )
+
+    def validate(self, attrs):
+        start = attrs.get("start_date")
+        end = attrs.get("end_date")
+
+        if start and end and start > end:
+            raise serializers.ValidationError(
+                "start_date must be before or equal to end_date"
+            )
+
+        if not start and not end:
+            today = date.today()
+            attrs["start_date"] = today
+            attrs["end_date"] = today
+        return attrs
+
+
+class DashboardSerializer(serializers.Serializer):
+    from_date = serializers.DateField()
+    to_date = serializers.DateField()
+    total_customers = serializers.IntegerField()
+    total_sales = serializers.DecimalField(max_digits=12, decimal_places=2)
+    low_stock_products = ProductSerializer(many=True)

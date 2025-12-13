@@ -1,7 +1,13 @@
+from django.http import HttpResponse
+from openpyxl import Workbook
 from rest_framework.exceptions import ValidationError
 
-from sales.models import OrderStatus
+from customers.models import Customer
+from products.models import Product
+from sales.models import Order, OrderStatus
 from stock.models import MovementType, StockMovement
+
+LOW_STOCK_THRESHOLD = 5
 
 
 def check_order_update_allowed(old_status, new_status):
@@ -68,3 +74,80 @@ def _restore_stock(order, user):
             user=user,
             movement_type=MovementType.ORDER_CANCELLED,
         )
+
+
+def export_sales_orders_excel(start_date, end_date):
+    queryset = (
+        Order.objects
+        .filter(
+            status=OrderStatus.CONFIRMED,
+            order_date__range=(start_date, end_date)
+        )
+        .select_related("customer", "created_by")
+        .prefetch_related("items", "items__product")
+        .order_by("order_date")
+    )
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sales Orders"
+
+    # Header
+    ws.append([
+        "Order Number",
+        "Order Date",
+        "Customer",
+        "Product",
+        "Qty",
+        "Unit Price",
+        "Line Total",
+        "Created By"
+    ])
+
+    for order in queryset:
+        for item in order.items.all():
+            ws.append([
+                order.order_number,
+                order.order_date,
+                order.customer.name,
+                item.product.name,
+                item.qty,
+                item.price,
+                item.total,
+                order.created_by.username
+            ])
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = (
+        f'attachment; filename="sales_{start_date}_to_{end_date}.xlsx"'
+    )
+
+    wb.save(response)
+    return response
+
+
+def get_dashboard_metrics(from_date=None, to_date=None):
+
+    orders_qs = Order.objects.filter(
+        status=OrderStatus.CONFIRMED,
+        order_date__range=(from_date, to_date),
+    )
+    total_sales_amount = sum(order.total_amount for order in orders_qs)
+
+    total_customers = Customer.objects.count()
+
+    low_stock_products = (
+        Product.objects
+        .filter(stock_qty__lte=LOW_STOCK_THRESHOLD)
+
+    )
+
+    return {
+        "from_date": from_date,
+        "to_date": to_date,
+        "total_customers": total_customers,
+        "total_sales": total_sales_amount,
+        "low_stock_products": list(low_stock_products),
+    }

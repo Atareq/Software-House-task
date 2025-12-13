@@ -13,9 +13,11 @@ class JWTLoginView(TokenObtainPairView):
     serializer_class = CustomJWTSerializer
     permission_classes = (AllowAny,)
 
+
 class SignupView(generics.CreateAPIView):
     serializer_class = SignupSerializer
     permission_classes = (IsAuthenticated, AdminPermission)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
