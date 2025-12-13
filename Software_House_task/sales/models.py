@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from safedelete.models import SafeDeleteModel
@@ -8,6 +10,10 @@ from products.models import Product
 User = get_user_model()
 
 
+def generate_order_number():
+    return str(uuid.uuid4())[:20]
+
+
 class OrderStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     CONFIRMED = "confirmed", "Confirmed"
@@ -16,7 +22,7 @@ class OrderStatus(models.TextChoices):
 
 class Order(SafeDeleteModel):
     order_number = models.CharField(max_length=20, unique=True,
-                                    auto_created=True)
+                                    default=generate_order_number)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     order_date = models.DateField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.PROTECT)

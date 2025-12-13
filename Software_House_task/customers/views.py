@@ -1,3 +1,15 @@
-from django.shortcuts import render
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
 
-# Create your views here.
+from core.permissions_helper import (AdminPermission,
+                                     SalesCreateAndReadOnlyPermission)
+
+from .models import Customer
+from .serializers import CustomerSerializer
+
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    permission_classes = (IsAuthenticated,
+                          SalesCreateAndReadOnlyPermission | AdminPermission)
